@@ -453,7 +453,7 @@ wsServer.on ('request', (request) => {
 					//If offer had video
 					if (videoOffer)
 					{
-						//Create video media
+						//Create vdeo media
 						let  video = new MediaInfo(videoOffer.getId(), "video");
 						
 						//Get codec types
@@ -461,7 +461,7 @@ wsServer.on ('request', (request) => {
 						//Add video codecs
 						video.addCodec(h264);
 						//Set recv only
-						video.setDirection(Direction.RECVONLY);
+						video.setDirection(Direction.SENDRECV);
 						//Add it to answer
 						answer.addMedia(video);
 					}
@@ -472,22 +472,28 @@ wsServer.on ('request', (request) => {
 						video : answer.getMedia("video")
 					});
 
+                    //For each stream offered
+                    for (let offered of offer.getStreams().values())
+                    {
+                        //Create the remote stream into the transport
+                        const incomingStream = transport.createIncomingStream(offered);
 
-					//Create new local stream with only video
-					const outgoingStream  = transport.createOutgoingStream({
-						audio: false,
-						video: true
-					});
+                        //Create new local stream with only video
+                        const outgoingStream  = transport.createOutgoingStream({
+                            audio: false,
+                            video: true
+                        });
 
-					//Copy incoming data from the broadcast stream to the local one
-					outgoingStream.getVideoTracks()[0].attachTo(session.getIncomingStreamTrack());
-					
-					//Get local stream info
-					const info = outgoingStream.getStreamInfo();
+                        //Get local stream info
+                        const info = outgoingStream.getStreamInfo();
 
-					//Add local stream info it to the answer
-					answer.addStream(info);
-						
+                        //Copy incoming data from the remote stream to the local one
+                        outgoingStream.attachTo(incomingStream);
+
+                        //Add local stream info it to the answer
+                        answer.addStream(info);
+
+                    }
 					//Send response
 					connection.sendUTF(JSON.stringify({
 						answer : answer.toString()

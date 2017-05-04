@@ -46,6 +46,7 @@ function pageReady() {
 
     if(navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            localStream = stream;
             addVideoForStream(stream, true);
     }).catch((e) => {
             console.error(e);
@@ -68,7 +69,6 @@ function connect()
         pc = new webkitRTCPeerConnection(null);
 
     pc.onaddstream = function(event) {
-        var prev = 0;
         console.debug("onAddStream",event);
         //Play it
         addVideoForStream(event.stream, false);
@@ -87,6 +87,7 @@ function connect()
     ws.onopen = function(){
         console.log("opened");
 
+        pc.addStream(localStream);
         //Create new offer
         pc.createOffer({
             offerToReceiveVideo: true
