@@ -163,38 +163,29 @@
 		</style>
 
 		<script src="js/gauge.min.js" type="text/javascript"></script>
-		
+		<script src="js/sfu.js" type="text/javascript"></script>
+
 	</head>
+
 	<body>
 		
 	<div id="container">
+
+		<div>
+			<div class="container-video">LOCAL
+				<video id="localVideo" autoplay></video>
+				<button onclick="connect()">Connect</button>
+			</div>
+		</div>
+
 		<div class="container-video">REMOTE
-			<video id="remote"></video>
+			<video id="remoteVideo" autoplay></video>
 		</div>
-		<dialog class="ready-dialog mdl-dialog">
-		<h4 class="mdl-dialog__title">Ready to test H264 broadcasting?</h4>
-		<div class="mdl-dialog__content">
-			<p>
-				This demo allows you to test the streaming capabilities of the Medooze Media Server.
-			</p>
-			<p>
-				You will need to open an mp4 file with VLC and start streaming it with: 
-			<pre>
-				<code>	
-:sout=#duplicate{dst=rtp{dst=your_ip_address,port=5004,sap,name=sergio},dst=display}
-:no-sout-audio 
-:sout-vide 
-:sout-keep
-				</code>
-			</pre>
-			</p>
-		</div>
-		<div class="mdl-dialog__actions">
-			<button type="button" class="ready mdl-button mdl-button mdl-button--raised  mdl-button--accent">Ready!</button>
-		</div>
-	</dialog>	
+
+		<script type="text/javascript">
+			pageReady();
+		</script>
 	</body>
 
 </html>	
 
-<script src="js/sfu.js" type="text/javascript"></script>
