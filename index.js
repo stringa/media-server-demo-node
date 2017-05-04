@@ -383,30 +383,30 @@ wsServer.on ('request', (request) => {
 			});
 			break;
 		}
-		case "broadcast":
-		{
-			const connection = request.accept(protocol);
-			
-			connection.on('message', (frame) =>
-			{
-				//Get cmd
-				var msg = JSON.parse(frame.utf8Data);
-				
-				
+        case "broadcast":
+        {
+            const connection = request.accept(protocol);
+
+            connection.on('message', (frame) =>
+            {
+                //Get cmd
+                var msg = JSON.parse(frame.utf8Data);
+
+
 				//Get cmd
 				if (msg.cmd==="OFFER")
 				{
-			
+
 					//Process the sdp
 					var offer = SDPInfo.process(msg.offer);
-					
+
 					//Create recoreder
 					const recorder = MediaServer.createRecorder ("/tmp/"+(new Date()) +".mp4");
-					
+
 					//Create an DTLS ICE transport in that enpoint
 					const transport = endpoint.createTransport({
 						dtls : offer.getDTLS(),
-						ice  : offer.getICE() 
+						ice  : offer.getICE()
 					});
 
 					//Set RTP remote properties
@@ -424,7 +424,7 @@ wsServer.on ('request', (request) => {
 
 					//Create local SDP info
 					let answer = new SDPInfo();
-					
+
 					//Add ice and dtls info
 					answer.setDTLS(dtls);
 					answer.setICE(ice);
@@ -432,8 +432,8 @@ wsServer.on ('request', (request) => {
 					for (let i=0;i<candidates.length;++i)
 						//Add candidate to media info
 						answer.addCandidate(candidates[i]);
-					
-					//Get remote video m-line info 
+
+					//Get remote video m-line info
 					let audioOffer = offer.getMedia("audio");
 
 					//If offer had video
@@ -447,21 +447,21 @@ wsServer.on ('request', (request) => {
 						answer.addMedia(audio);
 					}
 
-					//Get remote video m-line info 
+					//Get remote video m-line info
 					let videoOffer = offer.getMedia("video");
 
 					//If offer had video
 					if (videoOffer)
 					{
-						//Create vdeo media
+						//Create video media
 						let  video = new MediaInfo(videoOffer.getId(), "video");
-						
+
 						//Get codec types
 						let h264 = videoOffer.getCodec("h264");
 						//Add video codecs
 						video.addCodec(h264);
 						//Set recv only
-						video.setDirection(Direction.SENDRECV);
+						video.setDirection(Direction.RECVONLY);
 						//Add it to answer
 						answer.addMedia(video);
 					}
@@ -472,42 +472,161 @@ wsServer.on ('request', (request) => {
 						video : answer.getMedia("video")
 					});
 
-                    //For each stream offered
-                    for (let offered of offer.getStreams().values())
-                    {
-                        //Create the remote stream into the transport
-                        const incomingStream = transport.createIncomingStream(offered);
 
-                        //Create new local stream with only video
-                        const outgoingStream  = transport.createOutgoingStream({
-                            audio: false,
-                            video: true
-                        });
+					//Create new local stream with only video
+					const outgoingStream  = transport.createOutgoingStream({
+						audio: false,
+						video: true
+					});
 
-                        //Get local stream info
-                        const info = outgoingStream.getStreamInfo();
+					//Copy incoming data from the broadcast stream to the local one
+					outgoingStream.getVideoTracks()[0].attachTo(session.getIncomingStreamTrack());
 
-                        //Copy incoming data from the remote stream to the local one
-                        outgoingStream.attachTo(incomingStream);
+					//Get local stream info
+					const info = outgoingStream.getStreamInfo();
 
-                        //Add local stream info it to the answer
-                        answer.addStream(info);
+					//Add local stream info it to the answer
+					answer.addStream(info);
 
-                    }
 					//Send response
 					connection.sendUTF(JSON.stringify({
 						answer : answer.toString()
 					}));
-					
+
 					//Close on disconnect
 					connection.on("close",() => {
 						//Stop
 						transport.stop();
-					});
-				}	
-			});
-			break;
-		}
+				});
+            }
+        	});
+            break;
+        }
+        case "publisher":
+        {
+            const connection = request.accept(protocol);
+
+            connection.on('message', (frame) =>
+            {
+                //Get cmd
+                var msg = JSON.parse(frame.utf8Data);
+
+
+            //Get cmd
+            if (msg.cmd==="OFFER")
+            {
+
+                //Process the sdp
+                var offer = SDPInfo.process(msg.offer);
+
+                //Create recoreder
+                const recorder = MediaServer.createRecorder ("/tmp/"+(new Date()) +".mp4");
+
+                //Create an DTLS ICE transport in that enpoint
+                const transport = endpoint.createTransport({
+                    dtls : offer.getDTLS(),
+                    ice  : offer.getICE()
+                });
+
+                //Set RTP remote properties
+                transport.setRemoteProperties({
+                    audio : offer.getMedia("audio"),
+                    video : offer.getMedia("video")
+                });
+
+                //Get local DTLS and ICE info
+                const dtls = transport.getLocalDTLSInfo();
+                const ice  = transport.getLocalICEInfo();
+
+                //Get local candidates
+                const candidates = endpoint.getLocalCandidates();
+
+                //Create local SDP info
+                let answer = new SDPInfo();
+
+                //Add ice and dtls info
+                answer.setDTLS(dtls);
+                answer.setICE(ice);
+                //For each local candidate
+                for (let i=0;i<candidates.length;++i)
+                    //Add candidate to media info
+                    answer.addCandidate(candidates[i]);
+
+                //Get remote video m-line info
+                let audioOffer = offer.getMedia("audio");
+
+                //If offer had video
+                if (audioOffer)
+                {
+                    //Create video media
+                    let  audio = new MediaInfo(audioOffer.getId(), "audio");
+                    //Set recv only
+                    audio.setDirection(Direction.INACTIVE);
+                    //Add it to answer
+                    answer.addMedia(audio);
+                }
+
+                //Get remote video m-line info
+                let videoOffer = offer.getMedia("video");
+
+                //If offer had video
+                if (videoOffer)
+                {
+                    //Create vdeo media
+                    let  video = new MediaInfo(videoOffer.getId(), "video");
+
+                    //Get codec types
+                    let h264 = videoOffer.getCodec("h264");
+                    //Add video codecs
+                    video.addCodec(h264);
+                    //Set recv only
+                    video.setDirection(Direction.SENDRECV);
+                    //Add it to answer
+                    answer.addMedia(video);
+                }
+
+                //Set RTP local  properties
+                transport.setLocalProperties({
+                    audio : answer.getMedia("audio"),
+                    video : answer.getMedia("video")
+                });
+
+                //For each stream offered
+                for (let offered of offer.getStreams().values())
+                {
+                    //Create the remote stream into the transport
+                    const incomingStream = transport.createIncomingStream(offered);
+
+                    //Create new local stream with only video
+                    const outgoingStream  = transport.createOutgoingStream({
+                        audio: false,
+                        video: true
+                    });
+
+                    //Get local stream info
+                    const info = outgoingStream.getStreamInfo();
+
+                    //Copy incoming data from the remote stream to the local one
+                    outgoingStream.attachTo(incomingStream);
+
+                    //Add local stream info it to the answer
+                    answer.addStream(info);
+
+                }
+                //Send response
+                connection.sendUTF(JSON.stringify({
+                    answer : answer.toString()
+                }));
+
+                //Close on disconnect
+                connection.on("close",() => {
+                    //Stop
+                    // transport.stop();
+                });
+            }
+        });
+            break;
+        }
 		case "sfu":
 		{
 			var connection = request.accept(protocol);

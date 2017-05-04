@@ -82,7 +82,7 @@ function connect()
 
 
     var url = "wss://"+window.location.hostname+":"+window.location.port;
-    var ws = new WebSocket(url,"broadcast");
+    var ws = new WebSocket(url,"publisher");
 
     ws.onopen = function(){
         console.log("opened");
