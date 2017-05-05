@@ -2,6 +2,11 @@ const https = require ('https');
 const url = require ('url');
 const fs = require ('fs');
 const path = require ('path');
+const bodyParser = require('body-parser');
+const express = require('express');
+
+const app = express();
+
 const WebSocketServer = require ('websocket').server;
 
 //Get the Medooze Media Server interface
@@ -70,50 +75,24 @@ const map = {
 	'.doc': 'application/msword'
 };
 
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use('/', express.static(path.join(__dirname, 'www')));
+
+const roomList = {};
+
+app.get('/api/roomlist', (req, res) => {
+    res.send(roomList);
+});
+
+
 //Create HTTP server
-const server = https.createServer (options, (req, res) => {
-	// parse URL
-	const parsedUrl = url.parse (req.url);
-	// extract URL path
-	let pathname = base + parsedUrl.pathname;
-	// based on the URL path, extract the file extention. e.g. .js, .doc, ...
-	const ext = path.parse (pathname).ext;
-
-	//DO static file handling
-	fs.exists (pathname, (exist) => {
-		if (!exist)
-		{
-			// if the file is not found, return 404
-			res.statusCode = 404;
-			res.end (`File ${pathname} not found!`);
-			return;
-		}
-
-		// if is a directory search for index file matching the extention
-		if (fs.statSync (pathname).isDirectory ())
-			pathname += '/index.html';
-
-		// read file from file system
-		fs.readFile (pathname, (err, data) => {
-			if (err)
-			{
-				//Error
-				res.statusCode = 500;
-				res.end (`Error getting the file: ${err}.`);
-			} else {
-				// if the file is found, set Content-type and send data
-				res.setHeader ('Content-type', map[ext] || 'text/html');
-				res.end (data);
-			}
-		});
-	});
-}).listen (8000);
+const server = https.createServer (options, app).listen (8000);
 
 const wsServer = new WebSocketServer ({
 	httpServer: server,
 	autoAcceptConnections: false
 });
-
 
 wsServer.on ('request', (request) => {
 	//Get protocol for demo

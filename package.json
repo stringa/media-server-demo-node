@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/murillo128/media-server-demo-node#readme",
   "dependencies": {
+    "body-parser": "^1.17.1",
+    "express": "^4.15.2",
     "medooze-media-server": "^0.6.0",
     "semantic-sdp": "^2.0.0",
     "websocket": "^1.0.24"
